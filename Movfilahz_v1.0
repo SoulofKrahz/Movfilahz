@@ -1,0 +1,180 @@
+# File: Movfilahz_v1.0.py  
+# Autor: Soul of Krahz
+# Date: 11/30/2021
+# Description:  This script is designed to move in a fast and efficient way files to folders with the intention of 
+#               ordering the contents of any folder in a windows system having a log to control the applied changes.
+#               By default the path of the log file is "C:\movfilahz\ , to change it just change the path in the 
+#               "logPath" variable. 
+#               The script needs an argument to works, that arguments assign the path to check and move the files.
+#               Possible arguments: 1) -downloads | Ussage example: Movfilahz_v1.0.py -downloads
+#                                       Assigned path : C:\users\"username"\Downloads
+#                                   2) -documents | Ussage example: Movfilahz_v1.0.py -documents
+#                                       Assigned path : C:\users\"username"\Documents
+#                                   3) -all | Ussage example: Movfilahz_v1.0.py -all
+#                                       Assigned path: All on variable pathAssignement
+
+import shutil,os,sys
+from datetime import datetime
+from getpass import getuser
+from collections import defaultdict
+
+# Used to assign source and destination path of the files.
+selectedPath="" 
+# List of argument / path to files.
+pathAssignement={"-downloads":"C:/Users/"+getuser()+"/Downloads/",
+                 "-documents":"C:/Users/"+getuser()+"/Documents/",
+                }
+
+# Path to create a log file.
+logPath="C:/movfilahz/"
+
+# Time Variables
+now = datetime.now() # current date and time
+dateTime = now.strftime("%m/%d/%Y  %H:%M:%S")
+dateTimeFile = now.strftime("%m-%d-%Y-%H-%M-%S")
+
+# Extension and Assigned Folders 
+folderAssignment=defaultdict(list)
+# List of folders to create.
+folderList=["Text Files",
+            "PDF",
+            "Images",
+            "Compressed Files",
+            "Software",
+            "Isos",
+            "Python"]
+# List of extensions and his asigned folders.
+folderAssignment={#Text / PDF Files
+                ".txt":"Text Files",
+                ".log":"Text Files",
+                ".odt":"Text Files",
+                ".doc":"Text Files",
+                ".docx":"Text Files",
+                ".pdf":"PDF",
+                # Image Files
+                ".bmp":"Images",
+                ".jpg":"Images",
+                ".png":"Images",
+                ".ico":"Images",
+                ".gif":"Images",
+                ".tiff":"Images",
+                ".psd":"Images",
+                # Compressed Files
+                ".rar":"Compressed Files",
+                ".zip":"Compressed Files",
+                # Executable / ISO Files
+                ".exe":"Software",
+                ".msi":"Software",
+                ".iso":"Isos",
+                # Python Files
+                ".whl":"Python",
+                ".py":"Python"
+                }
+
+# Create Folders Function 
+def createFolders():
+    for folder in folderList:
+        for path in pathAssignement:
+            if sys.argv[1] in pathAssignement:
+                if os.path.exists(pathAssignement.get(sys.argv[1])+"/"+folder)==False:
+                    os.mkdir(pathAssignement.get(sys.argv[1])+folder)
+            if sys.argv[1]=="-all":
+                if os.path.exists(pathAssignement.get(path)+"/"+folder)==False:
+                    os.mkdir(pathAssignement.get(path)+folder)
+                    
+# Create Log Funcion
+def createLog(selectedPath):
+    extCounter = defaultdict(list)
+    notInExt= defaultdict(list)
+    fileNames = []
+    xFileNames = []
+    if not os.path.exists(logPath):
+        os.makedirs(logPath)
+    for fileName in os.listdir(selectedPath):
+        if "." in fileName:
+            ext = fileName.split(".")[-1].lower()
+            ext="."+ext
+            if ext in folderAssignment:
+                extCounter[ext].append(fileName)
+                fileNames.append(fileName)
+            if ext not in folderAssignment and ext!=".ini":
+                notInExt[ext].append(fileName)
+                xFileNames.append(fileName)
+    with open(logPath+"movfilahz.log", "a") as f:
+        f.write("[+] Successful execution -Selected Folder: "+selectedPath+" -Timestamp: "+str(dateTime)+"\n")
+    if len(extCounter) ==0 and len(notInExt)==0:
+        with open(logPath+"movfilahz.log", "a") as f:
+         f.write("   No files to move.\n")
+    # Files With assigned Folder
+    for ext, number in extCounter.items():
+        if ext in folderAssignment:
+            print(str(len(number))+" file(s) with "+ext+" extension have been moved to the assigned folder: "+ selectedPath+folderAssignment.get(ext))
+            with open(logPath+"movfilahz.log", "a") as f:
+                f.write("   "+str(len(number))+" file(s) with "+ext+" extension have been moved to the assigned folder: "+ selectedPath+folderAssignment.get(ext)+"\n")
+            for names in fileNames:
+                if names.endswith(ext):
+                    with open(logPath+"movfilahz.log", "a") as f:
+                        dst_path = selectedPath+str(folderAssignment.get(ext))
+                        if os.path.exists(dst_path+"/"+names)==False:
+                            f.write("      File Name: "+names+"\n")
+                        else:
+                            names=names.split(".")[0].lower()
+                            f.write("      File Name: "+names+ext+" already exists in the destination folder, moved with New File Name: "+names+"_"+dateTimeFile+ext+"\n")
+    # Files Without assigned Folder
+    for ext,number in notInExt.items():    
+        if ext not in folderAssignment:
+            print(str(len(number))+" file(s) with "+ext+" extension located, they have not been moved as they do not have a folder assigned to them.")
+            with open(logPath+"movfilahz.log", "a") as f:
+                f.write("   "+str(len(number))+" file(s) with "+ext+" extension located, they have not been moved as they do not have a folder assigned to them.\n")
+            for names in xFileNames:
+                 if names.endswith(ext):
+                    with open(logPath+"movfilahz.log", "a") as f:
+                        f.write("      File Name: "+names+"\n")     
+                                       
+# moveFiles Function
+def moveFiles(ext,selectedPath):
+    # Assign the path corresponding to the file type
+    for file in os.listdir(selectedPath):    
+        if file.endswith(ext):
+            src_path = selectedPath+file
+            if ext in folderAssignment:
+                dst_path = selectedPath+str(folderAssignment.get(ext))
+                if os.path.exists(dst_path+"/"+file)==False:
+                    shutil.move(src_path, dst_path)
+                else:
+                    # Change name of file if already exist.
+                    file=file.split(".")[0].lower()
+                    shutil.move(src_path, dst_path+"/"+file+"_"+dateTimeFile+ext) 
+                    
+# Main Function
+def main():
+    if len(sys.argv) == 2:
+        if sys.argv[1] =="-all":
+            # Check destination folders
+            createFolders()
+            for path in pathAssignement:
+                # Extension Counter Log Function
+                createLog(pathAssignement.get(path))
+                # Launch function moveFiles for each extension in the list
+                for ext in folderAssignment:
+                    selectedPath=pathAssignement.get(path)
+                    moveFiles(ext,selectedPath)           
+        else:
+            if sys.argv[1] in pathAssignement:
+                selectedPath= pathAssignement.get(sys.argv[1])
+                # Check destination folders
+                createFolders()
+                # Extension Counter Log Function
+                createLog(selectedPath)
+                # Launch function moveFiles for each extension in the list
+                for ext in folderAssignment:
+                    moveFiles(ext,selectedPath)
+            else:
+                print("ERROR! no argument -downloads , -documents or -all")
+                sys.exit()
+    else:
+        print("ERROR! no argument -downloads , -documents or -all")
+        sys.exit()
+        
+# Run Main Function 
+main()
